@@ -1,11 +1,12 @@
 import java.io.*;
+import java.util.Arrays;
 import java.util.regex.*;
 
 public class Grep {
 
 	public static void main(String[] args) throws IOException {
 		if (args.length < 1) {
-			System.out.println("Usage: PATTERN [FILE]");
+			System.err.println("Usage: PATTERN [FILE]");
 			return;
 		}
 
@@ -17,43 +18,55 @@ public class Grep {
 			System.exit(1);
 		}
 
-		BufferedReader br = null;
-		int i = 1;
-		do {
-			try {
-				if (args.length == 1) {
-					// No files; Default to System.in
-					br = new BufferedReader(new InputStreamReader(System.in));
-				}
-				else {
-					// Open file
-					br = new BufferedReader(new InputStreamReader(new FileInputStream(args[i])));
-				}
+		switch (args.length) {
+		case 1: // No extra arguments; Default to stdin
+			grepStdIn(pattern);
+			break;
+		case 2: // One file
+			grepSingleFile(pattern, args[1]);
+			break;
+		default: // Multiple files
+			grepMultiFiles(pattern, Arrays.copyOfRange(args,  1,  args.length));
+			break;
+		}
+	}
 
-				String s;
-				while ((s = br.readLine()) != null) {
-					Matcher matcher = pattern.matcher(s);
+	// Stdin formatting
+	private static void grepStdIn(Pattern pattern) throws IOException {
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+			StdInLineHandler reader = new StdInLineHandler(pattern, br);
 
-					// Pattern matched; print line
-					if (matcher.find()) {
-						if (args.length <= 2) {
-							// Don't need to specify file with System.in or with just one file
-							System.out.println(s);
-						}
-						else {
-							// Additionally print out file the line was matched in
-							System.out.println(args[i] + ": " + s);
-						}
-					}
+			while (reader.readLine() != null) {
+				reader.printLine();
+			}
+		}
+	}
+
+	// Single file formatting; Uses StdInLineHandler due to having the same formatting as stdin
+	private static void grepSingleFile(Pattern pattern, String file) throws IOException {
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
+			StdInLineHandler reader = new StdInLineHandler(pattern, br);
+
+			while (reader.readLine() != null) {
+				reader.printLine();
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println(e.getMessage());
+		}
+	}
+
+	// Multiple files formatting
+	private static void grepMultiFiles(Pattern pattern, String[] files) throws IOException {
+		for (String file : files) {
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
+				FileLineHandler reader = new FileLineHandler(pattern, br, file);
+
+				while (reader.readLine() != null) {
+					reader.printLine();
 				}
 			} catch (FileNotFoundException e) {
 				System.err.println(e.getMessage());
-			} finally {
-				i += 1;
-				if (br != null)
-					br.close();
 			}
-		} while (i < args.length);
+		}
 	}
-
 }
