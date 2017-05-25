@@ -18,54 +18,25 @@ public class Grep {
 			System.exit(1);
 		}
 
-		switch (args.length) {
-		case 1: // No extra arguments; Default to stdin
-			grepStdIn(pattern);
-			break;
-		case 2: // One file
-			grepSingleFile(pattern, args[1]);
-			break;
-		default: // Multiple files
-			grepMultiFiles(pattern, Arrays.copyOfRange(args,  1,  args.length));
-			break;
+		if (args.length == 1) { // No extra arguments; Default to stdin
+			try (LineHandler reader = new StdInLineHandler()) {
+				grep(pattern, reader);
+			}
 		}
-	}
-
-	// Stdin formatting
-	private static void grepStdIn(Pattern pattern) throws IOException {
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
-			StdInLineHandler reader = new StdInLineHandler(pattern, br);
-
-			while (reader.readLine() != null) {
-				reader.printLine();
+		else { // files
+			try (LineHandler reader = new FileLineHandler(Arrays.copyOfRange(args, 1, args.length))) {
+				grep(pattern, reader);
 			}
 		}
 	}
 
-	// Single file formatting; Uses StdInLineHandler due to having the same formatting as stdin
-	private static void grepSingleFile(Pattern pattern, String file) throws IOException {
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
-			StdInLineHandler reader = new StdInLineHandler(pattern, br);
+	private static void grep(Pattern pattern, LineHandler reader) throws IOException {
+		String line;
+		while ((line = reader.readLine()) != null) {
+			Matcher matcher = pattern.matcher(line);
 
-			while (reader.readLine() != null) {
+			if (matcher.find()) {
 				reader.printLine();
-			}
-		} catch (FileNotFoundException e) {
-			System.err.println(e.getMessage());
-		}
-	}
-
-	// Multiple files formatting
-	private static void grepMultiFiles(Pattern pattern, String[] files) throws IOException {
-		for (String file : files) {
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
-				FileLineHandler reader = new FileLineHandler(pattern, br, file);
-
-				while (reader.readLine() != null) {
-					reader.printLine();
-				}
-			} catch (FileNotFoundException e) {
-				System.err.println(e.getMessage());
 			}
 		}
 	}

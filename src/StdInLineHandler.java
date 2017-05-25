@@ -1,19 +1,26 @@
 import java.io.*;
-import java.util.regex.*;
 
-public class StdInLineHandler extends BaseLineHandler {
+public class StdInLineHandler implements LineHandler {
+	private BufferedReader reader;
+	private String line;
 
-	public StdInLineHandler(Pattern p, BufferedReader br) {
-		super(p, br, null);
+	public StdInLineHandler() {
+		reader = new BufferedReader(new InputStreamReader(System.in));
+	}
+
+	@Override
+	public String readLine() throws IOException {
+		line = reader.readLine();
+		return line;
 	}
 
 	@Override
 	public void printLine() {
-		Matcher matcher = pattern.matcher(line);
-
-		if (matcher.find()) {
-			System.out.println(line);
-		}
+		System.out.println(line);
 	}
 
+	@Override
+	public void close() throws IOException {
+		reader.close();
+	}
 }
